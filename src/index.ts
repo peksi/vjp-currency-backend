@@ -48,19 +48,19 @@ app.post("/message", async (req, res) => {
 
   if (!req.headers.secret || req.headers.secret !== "cwd") {
     res.send("Not authorized");
-  }
-
-  if (req.body.text && req.body.user) {
-    db.data?.posts.push({
-      timestamp: Date.now(),
-      text: req.body.text,
-      user: req.body.user,
-    });
-
-    await db.write();
-    res.send("Message saved");
   } else {
-    res.send("Error. Please provide text and user in the json body");
+    if (req.body.text && req.body.user) {
+      db.data?.posts.push({
+        timestamp: Date.now(),
+        text: req.body.text,
+        user: req.body.user,
+      });
+
+      await db.write();
+      res.send("Message saved");
+    } else {
+      res.send("Error. Please provide text and user in the json body");
+    }
   }
 });
 
