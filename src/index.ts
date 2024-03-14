@@ -1,67 +1,125 @@
 import express, { Request, Response } from "express";
-import { join, dirname } from "path";
-import { Low, JSONFile } from "lowdb";
-import { fileURLToPath } from "url";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-type Data = {
-  posts: {
-    timestamp: number;
-    text: string;
-    user: string;
-  }[];
-};
-
-const file = join(__dirname, "db.json");
-console.log({ file });
-const adapter = new JSONFile<Data>(file);
-const db = new Low<Data>(adapter);
 
 const app = express();
 app.use(express.json());
 const port = 3000;
 
-const prepDb = async () => {
-  await db.read();
-  db.data = db.data || { posts: [] };
-  console.log("db prepped");
-};
-
-prepDb();
+const currencies = [
+  {
+    name: "Tippaleipä",
+    abbreviation: "TIP",
+    value: 0.4,
+    symbol: "ഗ",
+  },
+  {
+    name: "Munkki",
+    abbreviation: "MUN",
+    value: 22.5,
+    symbol: "◯",
+  },
+  {
+    name: "Mokkapala",
+    abbreviation: "MOK",
+    value: 1.5,
+    symbol: "♢",
+  },
+  {
+    name: "Sima",
+    abbreviation: "SIM",
+    value: 0.7,
+    symbol: "Ṣ",
+  },
+  {
+    name: "Marianne",
+    abbreviation: "MAR",
+    value: 80.9,
+    symbol: "⌘",
+  },
+  {
+    name: "Kotisima",
+    abbreviation: "KIL",
+    value: 0.02,
+    symbol: "k̂",
+  },
+];
 
 app.get("/", (req: Request, res: Response) => {
-  res.json({ greeting: "Hello world!" });
+  res.json({
+    message:
+      "VJP Currency converter. Please find the API usage instructions in the readme",
+  });
 });
+
 app.get("/ping", (req: Request, res: Response) => {
   res.send("pong");
 });
 
-app.get("/messages", async (req, res) => {
-  console.log(db.data?.posts);
-
-  res.json(db.data?.posts);
+app.get("/currencies", async (req, res) => {
+  res.send({
+    description: "List of all available currencies",
+    currencies: currencies.map((currency) => {
+      return {
+        name: currency.name,
+        abbreviation: currency.abbreviation,
+        symbol: currency.symbol,
+      };
+    }),
+  });
 });
 
-app.post("/message", async (req, res) => {
-  console.log(req.body);
+app.post("/convert", async (req, res) => {
+  // request body needs to have the following fields
+  // from: string, to: string, amount: number
 
-  if (!req.headers.secret || req.headers.secret !== "cwd") {
-    res.send("Not authorized");
-  } else {
-    if (req.body.text && req.body.user) {
-      db.data?.posts.push({
-        timestamp: Date.now(),
-        text: req.body.text,
-        user: req.body.user,
-      });
-
-      await db.write();
-      res.send("Message saved");
-    } else {
-      res.send("Error. Please provide text and user in the json body");
-    }
+  if (!req.body.from || !req.body.to || !req.body.amount) {
+    return res.status(400).send({
+      error:
+        "Invalid request body. Please make sure that you have 'from', 'to' and 'amount'",
+    });
   }
+
+  const from = req.body.from;
+  const to = req.body.to;
+  const amount = req.body.amount;
+
+  // if from or to is not a valid currency, return 400
+  const fromCurrency = currencies.find(
+    (currency) => currency.abbreviation === from
+  );
+  const toCurrency = currencies.find(
+    (currency) => currency.abbreviation === to
+  );
+
+  if (!fromCurrency || !toCurrency) {
+    return res.status(400).send({
+      error: "Invalid currency. Please check the currency abbreviations",
+    });
+  }
+
+  // if amount is not a number, return 400
+  if (isNaN(amount)) {
+    return res.status(400).send({
+      error: "Invalid amount. Please make sure that the amount is a number",
+    });
+  }
+
+  // calculate the conversion
+  const convertedAmount = (amount * fromCurrency.value) / toCurrency.value;
+
+  res.send({
+    from: {
+      name: fromCurrency.name,
+      abbreviation: fromCurrency.abbreviation,
+      symbol: fromCurrency.symbol,
+      amount,
+    },
+    to: {
+      name: toCurrency.name,
+      abbreviation: toCurrency.abbreviation,
+      symbol: toCurrency.symbol,
+      amount: convertedAmount,
+    },
+  });
 });
 
 app.listen(port, () => {
