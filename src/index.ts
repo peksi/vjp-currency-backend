@@ -1,7 +1,15 @@
 import express, { Request, Response } from "express";
+import cors from "cors";
 
 const app = express();
 app.use(express.json());
+app.use(
+  cors({
+    origin: "*", // Allow all origins
+    methods: "*", // Allow all methods
+    allowedHeaders: "*", // Allow all headers
+  })
+);
 const port = 3000;
 
 const currencies = [
