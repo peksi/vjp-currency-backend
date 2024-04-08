@@ -9,3 +9,5 @@ services:
     environment:
       NODE_ENV: production
     restart: always
+    ports:
+      - 3080:3000
